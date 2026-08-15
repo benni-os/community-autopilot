@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: community-autopilot
+  namespace: benni-os
+spec:
+  schedule: "0 */6 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: autopilot
+              image: ghcr.io/benni-os/community-autopilot:latest
+              args: ["run", "--max", "10"]
+              envFrom:
+                - secretRef:
+                    name: community-autopilot-secrets
+          restartPolicy: OnFailure

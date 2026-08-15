@@ -1,0 +1,33 @@
+name: Community Autopilot
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (don't post)"
+        type: boolean
+        default: true
+
+jobs:
+  autopilot:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: |
+          python -m community_autopilot.cli run \
+            ${{ inputs.dry_run && '--dry-run' || '' }} \
+            --max 10
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTOPILOT_GITHUB_TOKEN }}
+          NEMESIS_URL: ${{ secrets.NEMESIS_URL }}
+          NEMESIS_API_KEY: ${{ secrets.NEMESIS_API_KEY }}
+          TENANT_ID: benni-os

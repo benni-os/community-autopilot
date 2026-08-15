@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: community-autopilot
+  namespace: benni-os
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: community-autopilot
+  template:
+    metadata:
+      labels:
+        app: community-autopilot
+    spec:
+      containers:
+        - name: autopilot
+          image: ghcr.io/benni-os/community-autopilot:latest
+          args: ["run"]
+          envFrom:
+            - secretRef:
+                name: community-autopilot-secrets
