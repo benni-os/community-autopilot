@@ -1,0 +1,30 @@
+[project]
+name = "community-autopilot"
+version = "0.1.0"
+description = "Benni OS Community Autopilot — autonomous GitHub issue responder with NEMESIS tracing"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "typer>=0.12",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.6", "mypy>=1.11", "pytest-cov>=4.0"]
+
+[project.scripts]
+autopilot = "community_autopilot.cli:app"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-v --cov=community_autopilot"
