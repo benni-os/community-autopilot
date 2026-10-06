@@ -245,7 +245,12 @@ async def _approve(repo: str, issue_number: int, message: str | None) -> None:
             "Authorization": f"Bearer {settings.github_token}",
             "Accept": "application/vnd.github+json",
         }
-        async with httpx.AsyncClient(base_url="https://api.github.com", headers=headers, timeout=30.0) as client:
+        async with httpx.AsyncClient(
+            base_url="https://api.github.com",
+            headers=headers,
+            timeout=30.0,
+            follow_redirects=True,
+        ) as client:
             resp = await client.get(f"/repos/{settings.github_org}/{repo}/issues/{issue_number}")
             resp.raise_for_status()
             data = resp.json()

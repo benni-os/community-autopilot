@@ -28,6 +28,7 @@ class NemesisClient:
             base_url=settings.nemesis_url,
             headers={"Authorization": f"Bearer {settings.nemesis_api_key}"},
             timeout=30.0,
+            follow_redirects=True,
         )
 
     def new_trace_id(self) -> str:

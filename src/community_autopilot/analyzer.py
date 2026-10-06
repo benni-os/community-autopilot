@@ -72,7 +72,7 @@ class Analyzer:
 
     async def _generate_draft(self, context: str, trace_id: str, issue: Issue | None = None) -> str:
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
                 resp = await client.post(
                     f"{self.settings.nemesis_url}/v1/nexus/inference",
                     headers={"Authorization": f"Bearer {self.settings.nemesis_api_key}"},
@@ -86,7 +86,6 @@ class Analyzer:
                         "trace_id": trace_id,
                         "tenant_id": self.settings.tenant_id,
                     },
-                    timeout=60.0,
                 )
                 resp.raise_for_status()
                 return str(resp.json()["choices"][0]["message"]["content"])

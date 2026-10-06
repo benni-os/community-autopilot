@@ -68,3 +68,50 @@ async def test_scan_all(settings: Settings, httpx_mock: HTTPXMock) -> None:
         issues = await watcher.scan_all()
         assert len(issues) == 1
         assert issues[0].number == 10
+
+
+@pytest.mark.asyncio
+async def test_scan_all_handles_repo_error(settings: Settings, httpx_mock: HTTPXMock) -> None:
+    settings.watched_repos = ["failing-repo", "good-repo"]
+    httpx_mock.add_response(
+        url=f"https://api.github.com/repos/{settings.github_org}/failing-repo/issues?state=open&per_page=100&sort=updated&direction=desc",
+        status_code=500,
+    )
+    httpx_mock.add_response(
+        url=f"https://api.github.com/repos/{settings.github_org}/good-repo/issues?state=open&per_page=100&sort=updated&direction=desc",
+        status_code=200,
+        json=[],
+    )
+    async with GitHubWatcher(settings, None) as watcher:
+        issues = await watcher.scan_all()
+        assert issues == []
+
+
+@pytest.mark.asyncio
+async def test_scan_all_handles_comment_error(settings: Settings, httpx_mock: HTTPXMock) -> None:
+    settings.watched_repos = ["repo-with-bad-comment"]
+    httpx_mock.add_response(
+        url=f"https://api.github.com/repos/{settings.github_org}/repo-with-bad-comment/issues?state=open&per_page=100&sort=updated&direction=desc",
+        status_code=200,
+        json=[
+            {
+                "number": 99,
+                "title": "Bug",
+                "body": "Body",
+                "user": {"login": "user"},
+                "labels": [],
+                "created_at": "2026-08-01T12:00:00Z",
+                "updated_at": "2026-08-01T12:00:00Z",
+                "html_url": "https://github.com/benni-os/repo/issues/99",
+                "assignees": [],
+            }
+        ],
+    )
+    httpx_mock.add_response(
+        url=f"https://api.github.com/repos/{settings.github_org}/repo-with-bad-comment/issues/99/comments?per_page=100",
+        status_code=500,
+    )
+    async with GitHubWatcher(settings, None) as watcher:
+        issues = await watcher.scan_all()
+        assert issues == []
+

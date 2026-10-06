@@ -27,7 +27,7 @@ jobs:
             ${{ inputs.dry_run && '--dry-run' || '' }} \
             --max 10
         env:
-          GITHUB_TOKEN: ${{ secrets.AUTOPILOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.AUTOPILOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           NEMESIS_URL: ${{ secrets.NEMESIS_URL }}
           NEMESIS_API_KEY: ${{ secrets.NEMESIS_API_KEY }}
           TENANT_ID: benni-os

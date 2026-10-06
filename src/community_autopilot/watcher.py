@@ -24,6 +24,7 @@ class GitHubWatcher:
                 "X-GitHub-Api-Version": "2022-11-28",
             },
             timeout=30.0,
+            follow_redirects=True,
         )
 
     async def scan_all(self) -> list[Issue]:
@@ -31,12 +32,18 @@ class GitHubWatcher:
         cutoff = datetime.now(UTC) - timedelta(hours=self.settings.stale_threshold_hours)
 
         for repo in self.settings.watched_repos:
-            issues = await self._fetch_open_issues(repo)
-            for issue in issues:
-                comments = await self._fetch_comments(repo, issue.number)
-                issue.comments = comments
-                if self._needs_attention(issue, cutoff):
-                    all_issues.append(issue)
+            try:
+                issues = await self._fetch_open_issues(repo)
+                for issue in issues:
+                    try:
+                        comments = await self._fetch_comments(repo, issue.number)
+                        issue.comments = comments
+                        if self._needs_attention(issue, cutoff):
+                            all_issues.append(issue)
+                    except Exception as exc:
+                        print(f"[WATCHER] Failed to fetch comments for {repo}#{issue.number}: {exc}")
+            except Exception as exc:
+                print(f"[WATCHER] Failed to scan repo {repo}: {exc}")
 
         if self.nemesis:
             await self.nemesis.log_action(

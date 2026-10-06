@@ -33,7 +33,7 @@ class SlackNotifier:
             "text": text,
         }
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
                 resp = await client.post(self.settings.slack_webhook_url, json=payload)
                 return resp.status_code == 200
         except Exception as exc:
@@ -67,7 +67,7 @@ class SlackNotifier:
             "text": text,
         }
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
                 resp = await client.post(self.settings.slack_webhook_url, json=payload)
                 return resp.status_code == 200
         except Exception as exc:

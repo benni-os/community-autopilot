@@ -21,6 +21,7 @@ class Responder:
                 "X-GitHub-Api-Version": "2022-11-28",
             },
             timeout=30.0,
+            follow_redirects=True,
         )
 
     async def post(self, draft: DraftResponse) -> str:
@@ -65,7 +66,7 @@ class Responder:
             )
         }
         try:
-            async with httpx.AsyncClient(timeout=10.0) as slack_client:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as slack_client:
                 await slack_client.post(self.settings.slack_webhook_url, json=payload)
         except Exception as exc:
             print(f"[SLACK] Failed to notify comment: {exc}")
