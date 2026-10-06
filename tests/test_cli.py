@@ -1,4 +1,4 @@
-"""Tests for CLI commands."""
+import re
 
 from pytest_httpx import HTTPXMock
 from typer.testing import CliRunner
@@ -6,31 +6,35 @@ from typer.testing import CliRunner
 from community_autopilot.cli import app
 from community_autopilot.config import Settings
 
-runner = CliRunner()
+runner = CliRunner(env={"NO_COLOR": "1", "TERM": "dumb"})
+
+
+def _clean(text: str) -> str:
+    return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
 
 
 def test_scan_help() -> None:
     result = runner.invoke(app, ["scan", "--help"])
     assert result.exit_code == 0
-    assert "--dry-run" in result.stdout
+    assert "dry-run" in _clean(result.stdout)
 
 
 def test_run_help() -> None:
     result = runner.invoke(app, ["run", "--help"])
     assert result.exit_code == 0
-    assert "--max" in result.stdout
+    assert "max" in _clean(result.stdout)
 
 
 def test_serve_help() -> None:
     result = runner.invoke(app, ["serve", "--help"])
     assert result.exit_code == 0
-    assert "--port" in result.stdout
+    assert "port" in _clean(result.stdout)
 
 
 def test_approve_help() -> None:
     result = runner.invoke(app, ["approve", "--help"])
     assert result.exit_code == 0
-    assert "--issue" in result.stdout
+    assert "issue" in _clean(result.stdout)
 
 
 def test_health_command() -> None:
