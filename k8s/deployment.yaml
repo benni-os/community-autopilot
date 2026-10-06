@@ -16,7 +16,22 @@ spec:
       containers:
         - name: autopilot
           image: ghcr.io/benni-os/community-autopilot:latest
-          args: ["run"]
+          args: ["serve"]
+          ports:
+            - containerPort: 8000
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 10
           envFrom:
             - secretRef:
                 name: community-autopilot-secrets

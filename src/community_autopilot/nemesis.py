@@ -1,11 +1,11 @@
 """NEMESIS Event Bus client — every action must have trace_id, tenant_id, objective, cost, evidence."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .config import Settings
 
@@ -18,7 +18,7 @@ class NemesisEvent(BaseModel):
     cost_usd: float
     evidence: dict[str, Any]
     timestamp: datetime
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class NemesisClient:
@@ -57,22 +57,31 @@ class NemesisClient:
                 objective=objective,
                 cost_usd=cost_usd,
                 evidence=evidence,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
         )
         return tid
 
     async def save_snapshot(self, status: str, last_completed: str, next_action: str) -> None:
-        await self.client.post(
-            "/v1/snapshots",
-            json={
-                "tenant_id": self.settings.tenant_id,
-                "status": status,
-                "last_completed": last_completed,
-                "next_action": next_action,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-        )
+        try:
+            await self.client.post(
+                "/v1/snapshots",
+                json={
+                    "tenant_id": self.settings.tenant_id,
+                    "status": status,
+                    "last_completed": last_completed,
+                    "next_action": next_action,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            )
+        except Exception as exc:
+            print(f"[NEMESIS] Failed to save snapshot: {exc}")
 
     async def close(self) -> None:
         await self.client.aclose()
+
+    async def __aenter__(self) -> "NemesisClient":
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        await self.close()

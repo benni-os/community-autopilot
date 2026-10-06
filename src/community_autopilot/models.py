@@ -1,18 +1,19 @@
 """Domain models for Issues, Comments, and Autopilot runs."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
 
 
-class Priority(str, Enum):
+class Priority(StrEnum):
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
 
 
-class IssueState(str, Enum):
+class IssueState(StrEnum):
     OPEN = "open"
     CLOSED = "closed"
 

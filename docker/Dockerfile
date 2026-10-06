@@ -1,8 +1,16 @@
 FROM python:3.12-slim
+
 WORKDIR /app
+
+# Copy dependency specifications and sources
 COPY pyproject.toml .
-RUN pip install --no-cache-dir .
 COPY src/ src/
+
+# Install application and production dependencies
+RUN pip install --no-cache-dir .
+
 ENV PYTHONUNBUFFERED=1
-ENTRYPOINT ["python", "-m", "community_autopilot.cli"]
+EXPOSE 8000
+
+ENTRYPOINT ["autopilot"]
 CMD ["run"]

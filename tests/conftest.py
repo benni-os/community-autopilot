@@ -1,23 +1,34 @@
 """Pytest fixtures and mocks."""
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
-from datetime import datetime, timezone
 
 from community_autopilot.config import Settings
-from community_autopilot.models import Issue, Comment, IssueState, Priority
+from community_autopilot.models import Comment, Issue, IssueState
+
+
+@pytest.fixture(autouse=True)
+def set_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GITHUB_TOKEN", "test_token")
+    monkeypatch.setenv("NEMESIS_API_KEY", "test_key")
+    monkeypatch.setenv("SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/test")
+    monkeypatch.setenv("WEBHOOK_SECRET", "test_secret")
 
 
 @pytest.fixture
-def settings():
+def settings() -> Settings:
     return Settings(
         github_token="test_token",
         nemesis_api_key="test_key",
         dry_run=True,
+        slack_webhook_url="https://hooks.slack.com/services/test",
     )
 
 
 @pytest.fixture
-def sample_issue():
+def sample_issue() -> Issue:
+    now = datetime.now(UTC)
     return Issue(
         number=34,
         repo="mcp-forge",
@@ -31,22 +42,21 @@ def sample_issue():
                 id=1,
                 author="contributor",
                 body="I'd like to work on this.",
-                created_at=datetime.now(timezone.utc),
+                created_at=now,
                 is_maintainer=False,
                 html_url="https://github.com/benni-os/mcp-forge/issues/34#issuecomment-1",
             )
         ],
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=now,
+        updated_at=now,
         html_url="https://github.com/benni-os/mcp-forge/issues/34",
         assignees=[],
     )
 
 
 @pytest.fixture
-def stale_issue():
-    from datetime import timedelta
-    old = datetime.now(timezone.utc) - timedelta(hours=50)
+def stale_issue() -> Issue:
+    old = datetime.now(UTC) - timedelta(hours=50)
     return Issue(
         number=35,
         repo="mcp-forge",

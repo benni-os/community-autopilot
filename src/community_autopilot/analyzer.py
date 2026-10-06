@@ -1,20 +1,23 @@
 """Priority analyzer — ranks issues by urgency and generates context for the LLM."""
 
-from datetime import datetime, timezone, timedelta
+import uuid
+from datetime import UTC, datetime
+
+import httpx
 
 from .config import Settings
-from .models import Issue, Priority, DraftResponse
+from .models import DraftResponse, Issue, Priority
 from .nemesis import NemesisClient
 from .prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 
 
 class Analyzer:
-    def __init__(self, settings: Settings, nemesis: NemesisClient) -> None:
+    def __init__(self, settings: Settings, nemesis: NemesisClient | None = None) -> None:
         self.settings = settings
         self.nemesis = nemesis
 
     def prioritize(self, issue: Issue) -> Priority:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         hours_since_update = (now - issue.updated_at).total_seconds() / 3600
         has_external_comment = any(not c.is_maintainer for c in issue.comments)
         is_good_first = "good first issue" in issue.labels
@@ -47,37 +50,49 @@ class Analyzer:
     async def analyze(self, issue: Issue) -> DraftResponse:
         priority = self.prioritize(issue)
         context = self.build_context(issue)
-        trace_id = self.nemesis.new_trace_id()
-        draft_body = await self._generate_draft(context, trace_id)
+        trace_id = (
+            self.nemesis.new_trace_id()
+            if self.nemesis
+            else f"autopilot-{uuid.uuid4().hex[:12]}"
+        )
+        draft_body = await self._generate_draft(context, trace_id, issue)
 
         return DraftResponse(
             issue=issue,
             priority=priority,
             draft_body=draft_body,
-            reasoning=f"Priority={priority.value}, comments={len(issue.comments)}, "
-                      f"last_author={issue.comments[-1].author if issue.comments else 'none'}",
+            reasoning=(
+                f"Priority={priority.value}, comments={len(issue.comments)}, "
+                f"last_author={issue.comments[-1].author if issue.comments else 'none'}"
+            ),
             requires_approval=self.settings.require_approval or priority in {Priority.CRITICAL, Priority.HIGH},
             estimated_tokens=len(draft_body.split()) * 2,
             trace_id=trace_id,
         )
 
-    async def _generate_draft(self, context: str, trace_id: str) -> str:
-        import httpx
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.settings.nemesis_url}/v1/nexus/inference",
-                headers={"Authorization": f"Bearer {self.settings.nemesis_api_key}"},
-                json={
-                    "model": self.settings.llm_model,
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": context},
-                    ],
-                    "max_tokens": self.settings.llm_max_tokens,
-                    "trace_id": trace_id,
-                    "tenant_id": self.settings.tenant_id,
-                },
-                timeout=60.0,
+    async def _generate_draft(self, context: str, trace_id: str, issue: Issue | None = None) -> str:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self.settings.nemesis_url}/v1/nexus/inference",
+                    headers={"Authorization": f"Bearer {self.settings.nemesis_api_key}"},
+                    json={
+                        "model": self.settings.llm_model,
+                        "messages": [
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": context},
+                        ],
+                        "max_tokens": self.settings.llm_max_tokens,
+                        "trace_id": trace_id,
+                        "tenant_id": self.settings.tenant_id,
+                    },
+                    timeout=60.0,
+                )
+                resp.raise_for_status()
+                return str(resp.json()["choices"][0]["message"]["content"])
+        except Exception:
+            author = f"@{issue.author}" if issue else "contributor"
+            return (
+                f"Hi {author}! Thank you for opening this issue. We are reviewing the details "
+                f"and will get back to you shortly. Feel free to add any additional context or logs in the meantime."
             )
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]

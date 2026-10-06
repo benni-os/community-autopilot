@@ -1,20 +1,25 @@
 """Configuration module with Pydantic Settings."""
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # GitHub
-    github_token: str
+    github_token: str = Field(default="")
     github_org: str = "benni-os"
-    watched_repos: list[str] = Field(default=["mcp-forge", "benni-nexus", "benni-os"])
+    watched_repos: list[str] = Field(
+        default_factory=lambda: ["mcp-forge", "benni-nexus", "benni-os"]
+    )
+    maintainer_logins: list[str] = Field(
+        default_factory=lambda: ["BenniAlencar", "benni-os", "benni-bot"]
+    )
 
     # NEMESIS
     nemesis_url: str = "https://nemesis.benni.os"
-    nemesis_api_key: str
+    nemesis_api_key: str = Field(default="")
     tenant_id: str = "benni-os"
 
     # LLM (via NEMESIS Nexus)
@@ -24,6 +29,11 @@ class Settings(BaseSettings):
     # Slack
     slack_webhook_url: str | None = None
     slack_channel: str = "#community"
+
+    # Webhook server
+    webhook_host: str = "0.0.0.0"
+    webhook_port: int = 8000
+    webhook_secret: str | None = None
 
     # Timing
     poll_interval_hours: int = 6
