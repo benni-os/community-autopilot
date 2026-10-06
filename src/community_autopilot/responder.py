@@ -13,13 +13,16 @@ class Responder:
     def __init__(self, settings: Settings, nemesis: NemesisClient | None = None) -> None:
         self.settings = settings
         self.nemesis = nemesis
+        headers: dict[str, str] = {
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        if settings.github_token:
+            headers["Authorization"] = f"Bearer {settings.github_token}"
+
         self.client = httpx.AsyncClient(
             base_url="https://api.github.com",
-            headers={
-                "Authorization": f"Bearer {settings.github_token}",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
+            headers=headers,
             timeout=30.0,
             follow_redirects=True,
         )

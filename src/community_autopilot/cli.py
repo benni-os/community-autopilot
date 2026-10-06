@@ -1,4 +1,4 @@
-"""Typer CLI — entry point for local runs, GitHub Actions, and Webhook server."""
+"""Typer CLI -- entry point for local runs, GitHub Actions, and Webhook server."""
 
 import asyncio
 from datetime import UTC, datetime
@@ -18,7 +18,7 @@ from .slack import SlackNotifier
 from .watcher import GitHubWatcher
 
 app = typer.Typer(name="autopilot", help="Benni OS Community Autopilot")
-console = Console()
+console = Console(safe_box=True)
 
 
 @app.command()
@@ -90,7 +90,7 @@ async def _scan(dry_run: bool, repo: str | None) -> None:
 
         for issue in issues:
             draft = await analyzer.analyze(issue)
-            last_author = issue.comments[-1].author if issue.comments else "—"
+            last_author = issue.comments[-1].author if issue.comments else "-"
             color = {
                 "critical": "red",
                 "high": "yellow",
@@ -153,7 +153,7 @@ async def _run(dry_run: bool, max_comments: int, repo: str | None = None) -> Non
                 continue
             if draft.requires_approval and not dry_run:
                 console.print(
-                    f"[yellow]⚠ Approval required for #{draft.issue.number} ({draft.issue.repo}) — skipping[/yellow]"
+                    f"[yellow][!] Approval required for #{draft.issue.number} ({draft.issue.repo}) - skipping[/yellow]"
                 )
                 await slack.notify_pending_draft(draft)
                 run_meta.drafts_pending += 1
@@ -180,7 +180,7 @@ async def _run(dry_run: bool, max_comments: int, repo: str | None = None) -> Non
 
         await slack.notify_run_summary(run_meta)
 
-        console.print(f"\n[green]✓ Run {run_meta.run_id} complete[/green]")
+        console.print(f"\n[green][OK] Run {run_meta.run_id} complete[/green]")
         console.print(
             f"  Scanned: {run_meta.issues_scanned} | Posted: {run_meta.comments_posted} | Pending: {run_meta.drafts_pending}"
         )
@@ -241,10 +241,11 @@ async def _approve(repo: str, issue_number: int, message: str | None) -> None:
     responder = Responder(settings, nemesis)
 
     try:
-        headers = {
-            "Authorization": f"Bearer {settings.github_token}",
+        headers: dict[str, str] = {
             "Accept": "application/vnd.github+json",
         }
+        if settings.github_token:
+            headers["Authorization"] = f"Bearer {settings.github_token}"
         async with httpx.AsyncClient(
             base_url="https://api.github.com",
             headers=headers,
@@ -277,7 +278,7 @@ async def _approve(repo: str, issue_number: int, message: str | None) -> None:
 
         console.print(Panel(draft.draft_body, title=f"Posting Approved Comment to #{issue_number} ({repo})"))
         url = await responder.post(draft)
-        console.print(f"[green]✓ Comment posted successfully: {url}[/green]")
+        console.print(f"[green][OK] Comment posted successfully: {url}[/green]")
     finally:
         await responder.close()
         await nemesis.close()

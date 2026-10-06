@@ -24,9 +24,13 @@ class NemesisEvent(BaseModel):
 class NemesisClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        headers: dict[str, str] = {}
+        if settings.nemesis_api_key:
+            headers["Authorization"] = f"Bearer {settings.nemesis_api_key}"
+
         self.client = httpx.AsyncClient(
             base_url=settings.nemesis_url,
-            headers={"Authorization": f"Bearer {settings.nemesis_api_key}"},
+            headers=headers,
             timeout=30.0,
             follow_redirects=True,
         )

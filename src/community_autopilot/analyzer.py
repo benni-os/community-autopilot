@@ -72,10 +72,14 @@ class Analyzer:
 
     async def _generate_draft(self, context: str, trace_id: str, issue: Issue | None = None) -> str:
         try:
+            headers: dict[str, str] = {}
+            if self.settings.nemesis_api_key:
+                headers["Authorization"] = f"Bearer {self.settings.nemesis_api_key}"
+
             async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
                 resp = await client.post(
                     f"{self.settings.nemesis_url}/v1/nexus/inference",
-                    headers={"Authorization": f"Bearer {self.settings.nemesis_api_key}"},
+                    headers=headers,
                     json={
                         "model": self.settings.llm_model,
                         "messages": [
